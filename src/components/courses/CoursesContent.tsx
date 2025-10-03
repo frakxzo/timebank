@@ -26,6 +26,7 @@ export default function CoursesContent() {
   const purchase = useMutation(api.courses.purchase);
   const adminUpdate = useMutation(api.courses.adminUpdate);
   const [openVideosFor, setOpenVideosFor] = useState<string | null>(null);
+  const currentUser = useQuery(api.users.current, {});
 
   const handleSignOut = async () => {
     await signOut();
@@ -222,7 +223,8 @@ export default function CoursesContent() {
                               // Prevent purchasing courses that are not for sale (price <= 0 or undefined)
                               (() => {
                                 const price = course.price ?? 0;
-                                const balance = user?.pointsBalance ?? 0;
+                                // Use reactive balance from Convex instead of stale auth user
+                                const balance = (currentUser?.pointsBalance ?? 0);
                                 if (price <= 0) {
                                   return (
                                     <Button className="w-full" variant="outline" disabled>

@@ -19,6 +19,16 @@ export const currentUser = query({
   },
 });
 
+// Add: reactive current user query
+export const current = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) return null;
+    return user;
+  },
+});
+
 /**
  * Use this function internally to get the current user data. Remember to handle the null user case.
  * @param ctx
