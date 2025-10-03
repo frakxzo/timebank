@@ -299,3 +299,117 @@ export const adminUpdate = mutation({
     await ctx.db.patch(courseId, updates);
   },
 });
+
+// List videos for a course
+export const listVideos = query({
+  args: { courseId: v.id("courses") },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+
+    const course = await ctx.db.get(args.courseId);
+    if (!course) throw new Error("Course not found");
+
+    // Admins can always see all videos
+    if (user.role !== "admin") {
+      // Interns must own the course to view videos
+      const owned = await ctx.db
+        .query("coursePurchases")
+        .withIndex("by_user_and_course", (q) =>
+          q.eq("userId", user._id).eq("courseId", args.courseId),
+        )
+        .first();
+      if (!owned) {
+        throw new Error("You must own this course to view its videos");
+      }
+    }
+
+    const vids = await ctx.db
+      .query("courseVideos")
+      .withIndex("by_course", (q) => q.eq("courseId", args.courseId))
+      .collect();
+
+    // Attach signed URLs for stored files
+    const results = await Promise.all(
+      vids.map(async (vdoc) => {
+        const signedUrl = vdoc.fileId ? await ctx.storage.getUrl(vdoc.fileId) : undefined;
+        return {
+          ...vdoc,
+          signedUrl,
+        };
+      }),
+    );
+    return results;
+  },
+});
+
+// Generate upload URL for a course video (admins or interns who own the course)
+export const generateVideoUploadUrl = mutation({
+  args: { courseId: v.id("courses") },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+
+    if (user.role !== "admin") {
+      // Interns must own the course to upload
+      const owned = await ctx.db
+        .query("coursePurchases")
+        .withIndex("by_user_and_course", (q) =>
+          q.eq("userId", user._id).eq("courseId", args.courseId),
+        )
+        .first();
+      if (!owned) {
+        throw new Error("You must own this course to upload a video");
+      }
+    }
+
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+// Add a video (URL or uploaded file) to a course
+export const addVideo = mutation({
+  args: {
+    courseId: v.id("courses"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    // Provide either a videoUrl or a fileId (one must be present)
+    videoUrl: v.optional(v.string()),
+    fileId: v.optional(v.id("_storage")),
+    order: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+
+    const course = await ctx.db.get(args.courseId);
+    if (!course) throw new Error("Course not found");
+
+    // Permissions: admin can always add; interns must own
+    if (user.role !== "admin") {
+      const owned = await ctx.db
+        .query("coursePurchases")
+        .withIndex("by_user_and_course", (q) =>
+          q.eq("userId", user._id).eq("courseId", args.courseId),
+        )
+        .first();
+      if (!owned) {
+        throw new Error("You must own this course to add videos");
+      }
+    }
+
+    if (!args.videoUrl && !args.fileId) {
+      throw new Error("Provide a videoUrl or upload a file");
+    }
+
+    await ctx.db.insert("courseVideos", {
+      courseId: args.courseId,
+      addedBy: user._id,
+      title: args.title,
+      description: args.description,
+      videoUrl: args.videoUrl,
+      fileId: args.fileId,
+      order: args.order,
+    });
+  },
+});

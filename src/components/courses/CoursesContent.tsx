@@ -9,6 +9,7 @@ import { BookOpen, LogOut, Plus, Check, X } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import UploadCourseDialog from "@/components/courses/UploadCourseDialog";
+import CourseVideosDialog from "@/components/courses/CourseVideosDialog";
 import { toast } from "sonner";
 
 export default function CoursesContent() {
@@ -22,6 +23,7 @@ export default function CoursesContent() {
   const [openUpload, setOpenUpload] = useState(false);
   const purchase = useMutation(api.courses.purchase);
   const adminUpdate = useMutation(api.courses.adminUpdate);
+  const [openVideosFor, setOpenVideosFor] = useState<string | null>(null);
 
   const handleSignOut = async () => {
     await signOut();
@@ -108,6 +110,13 @@ export default function CoursesContent() {
                         <Button
                           variant="outline"
                           className="w-full"
+                          onClick={() => setOpenVideosFor(course._id as any)}
+                        >
+                          Manage Videos
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full"
                           onClick={async () => {
                             const newTitle = window.prompt("Update title (leave blank to keep current):", course.title) || undefined;
                             const newDesc = window.prompt("Update description (leave blank to keep current):", course.description) || undefined;
@@ -152,9 +161,18 @@ export default function CoursesContent() {
                     ) : (
                       <>
                         {course.isOwned ? (
-                          <Button variant="outline" className="w-full">
-                            Start Learning
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button variant="outline" className="w-full">
+                              Start Learning
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => setOpenVideosFor(course._id as any)}
+                            >
+                              Videos
+                            </Button>
+                          </div>
                         ) : (
                           <Button
                             className="w-full"
@@ -177,6 +195,18 @@ export default function CoursesContent() {
               </motion.div>
             ))}
           </div>
+
+          {/* Videos Dialog (per course) */}
+          {openVideosFor && (
+            <CourseVideosDialog
+              open={!!openVideosFor}
+              onOpenChange={(o) => !o && setOpenVideosFor(null)}
+              courseId={openVideosFor}
+              isOwned={!!courses?.find((c) => (c._id as any) === openVideosFor)?.isOwned}
+              isAdmin={user?.role === "admin"}
+              courseTitle={courses?.find((c) => (c._id as any) === openVideosFor)?.title || "Course"}
+            />
+          )}
 
          {user?.role === "admin" && pending && pending.length > 0 && (
            <div className="space-y-4">

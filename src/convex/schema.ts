@@ -150,6 +150,18 @@ const schema = defineSchema(
       .index("by_user", ["userId"])
       .index("by_course", ["courseId"])
       .index("by_user_and_course", ["userId", "courseId"]),
+
+    // Add: Per-course videos (URL or uploaded file)
+    courseVideos: defineTable({
+      courseId: v.id("courses"),
+      addedBy: v.id("users"),
+      title: v.string(),
+      description: v.optional(v.string()),
+      // Either a remote URL (e.g., YouTube) or an uploaded file
+      videoUrl: v.optional(v.string()),
+      fileId: v.optional(v.id("_storage")),
+      order: v.optional(v.number()),
+    }).index("by_course", ["courseId"]),
   },
   {
     schemaValidation: false,
