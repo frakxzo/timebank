@@ -42,31 +42,31 @@ export const seed = internalMutation({
     let internId: Id<"users"> | null = null;
     if (!usersAny) {
       adminId = await ctx.db.insert("users", {
-        email: "admin@example.com",
-        name: "Admin One",
+        email: "admin@demo.local",
+        name: "admin",
         role: "admin" as any,
         pointsBalance: 0,
         totalPointsEarned: 0,
         totalPointsSpent: 0,
       });
       companyId = await ctx.db.insert("users", {
-        email: "acme@company.com",
-        name: "Acme Corp",
+        email: "company_1@demo.local",
+        name: "company_1",
         role: "company" as any,
         pointsBalance: 1000,
         totalPointsEarned: 0,
         totalPointsSpent: 0,
       });
       internId = await ctx.db.insert("users", {
-        email: "intern@example.com",
-        name: "Jane Intern",
+        email: "intern_1@demo.local",
+        name: "intern_1",
         role: "intern" as any,
         pointsBalance: 0,
         totalPointsEarned: 0,
         totalPointsSpent: 0,
         skills: ["React", "Design"],
       });
-      console.log("✅ Seeded users");
+      console.log("✅ Seeded users (use email OTP): admin@demo.local, company_1@demo.local, intern_1@demo.local");
     } else {
       // Try to find any company/admin/intern
       const allUsers = await ctx.db.query("users").collect();
