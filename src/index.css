@@ -1,8 +1,8 @@
+/* Moved to the top of the file to satisfy PostCSS import ordering */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @custom-variant dark (&:is(.dark *));
-
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
 
 @theme inline {
   --radius-sm: 0px;
