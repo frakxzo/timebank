@@ -2,42 +2,132 @@ import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { Infer, v } from "convex/values";
 
-// default user roles. can add / remove based on the project as needed
+// User roles for TimeBank
 export const ROLES = {
   ADMIN: "admin",
-  USER: "user",
-  MEMBER: "member",
+  COMPANY: "company",
+  INTERN: "intern",
 } as const;
 
 export const roleValidator = v.union(
   v.literal(ROLES.ADMIN),
-  v.literal(ROLES.USER),
-  v.literal(ROLES.MEMBER),
+  v.literal(ROLES.COMPANY),
+  v.literal(ROLES.INTERN),
 );
 export type Role = Infer<typeof roleValidator>;
 
+// Project status
+export const PROJECT_STATUS = {
+  OPEN: "open",
+  IN_PROGRESS: "in_progress",
+  COMPLETED: "completed",
+  CANCELLED: "cancelled",
+} as const;
+
+export const projectStatusValidator = v.union(
+  v.literal(PROJECT_STATUS.OPEN),
+  v.literal(PROJECT_STATUS.IN_PROGRESS),
+  v.literal(PROJECT_STATUS.COMPLETED),
+  v.literal(PROJECT_STATUS.CANCELLED),
+);
+
 const schema = defineSchema(
   {
-    // default auth tables using convex auth.
-    ...authTables, // do not remove or modify
+    ...authTables,
 
-    // the users table is the default users table that is brought in by the authTables
     users: defineTable({
-      name: v.optional(v.string()), // name of the user. do not remove
-      image: v.optional(v.string()), // image of the user. do not remove
-      email: v.optional(v.string()), // email of the user. do not remove
-      emailVerificationTime: v.optional(v.number()), // email verification time. do not remove
-      isAnonymous: v.optional(v.boolean()), // is the user anonymous. do not remove
+      name: v.optional(v.string()),
+      image: v.optional(v.string()),
+      email: v.optional(v.string()),
+      emailVerificationTime: v.optional(v.number()),
+      isAnonymous: v.optional(v.boolean()),
+      role: v.optional(roleValidator),
+      
+      // Additional profile fields
+      bio: v.optional(v.string()),
+      company: v.optional(v.string()),
+      skills: v.optional(v.array(v.string())),
+      location: v.optional(v.string()),
+      website: v.optional(v.string()),
+      
+      // Points balance
+      pointsBalance: v.optional(v.number()),
+      totalPointsEarned: v.optional(v.number()),
+      totalPointsSpent: v.optional(v.number()),
+    }).index("email", ["email"]),
 
-      role: v.optional(roleValidator), // role of the user. do not remove
-    }).index("email", ["email"]), // index for the email. do not remove or modify
+    // Projects posted by companies
+    projects: defineTable({
+      title: v.string(),
+      description: v.string(),
+      companyId: v.id("users"),
+      pointsReward: v.number(),
+      status: projectStatusValidator,
+      category: v.string(),
+      difficulty: v.string(),
+      duration: v.string(),
+      requirements: v.array(v.string()),
+      assignedInternId: v.optional(v.id("users")),
+      completedAt: v.optional(v.number()),
+    })
+      .index("by_company", ["companyId"])
+      .index("by_status", ["status"])
+      .index("by_assigned_intern", ["assignedInternId"]),
 
-    // add other tables here
+    // Point packages for companies to purchase
+    pointPackages: defineTable({
+      name: v.string(),
+      points: v.number(),
+      price: v.number(),
+      description: v.string(),
+      isActive: v.boolean(),
+    }),
 
-    // tableName: defineTable({
-    //   ...
-    //   // table fields
-    // }).index("by_field", ["field"])
+    // Transactions for point purchases and earnings
+    transactions: defineTable({
+      userId: v.id("users"),
+      type: v.union(v.literal("purchase"), v.literal("earn"), v.literal("spend")),
+      amount: v.number(),
+      description: v.string(),
+      projectId: v.optional(v.id("projects")),
+      packageId: v.optional(v.id("pointPackages")),
+    }).index("by_user", ["userId"]),
+
+    // Project applications from interns
+    applications: defineTable({
+      projectId: v.id("projects"),
+      internId: v.id("users"),
+      status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("rejected")),
+      message: v.string(),
+    })
+      .index("by_project", ["projectId"])
+      .index("by_intern", ["internId"]),
+
+    // Courses for interns (accessible by admin and intern)
+    courses: defineTable({
+      title: v.string(),
+      description: v.string(),
+      category: v.string(),
+      videoUrl: v.optional(v.string()),
+      videoStorageId: v.optional(v.id("_storage")),
+      thumbnailUrl: v.optional(v.string()),
+      duration: v.optional(v.string()),
+      uploadedBy: v.id("users"),
+    })
+      .index("by_category", ["category"])
+      .index("by_uploader", ["uploadedBy"]),
+
+    // Course progress tracking
+    courseProgress: defineTable({
+      courseId: v.id("courses"),
+      userId: v.id("users"),
+      completed: v.boolean(),
+      progress: v.number(),
+      lastWatchedAt: v.optional(v.number()),
+    })
+      .index("by_user", ["userId"])
+      .index("by_course", ["courseId"])
+      .index("by_user_and_course", ["userId", "courseId"]),
   },
   {
     schemaValidation: false,
