@@ -187,18 +187,37 @@ export default function CoursesContent() {
                         ) : (
                           <>
                             {course.isOwned ? (
-                              <div className="flex gap-2">
-                                <Button variant="outline" className="flex-1">
-                                  Start Learning
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  className="flex-1"
-                                  onClick={() => setOpenVideosFor(course._id as any)}
-                                >
-                                  Videos
-                                </Button>
-                              </div>
+                              view === "mine" ? (
+                                <div className="flex">
+                                  <Button
+                                    variant="outline"
+                                    className="w-full"
+                                    onClick={() => setOpenVideosFor(course._id as any)}
+                                  >
+                                    Videos
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => {
+                                      setView("mine" as any);
+                                      setOpenVideosFor(course._id as any);
+                                    }}
+                                  >
+                                    Start Learning
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => setOpenVideosFor(course._id as any)}
+                                  >
+                                    Videos
+                                  </Button>
+                                </div>
+                              )
                             ) : (
                               // Prevent purchasing courses that are not for sale (price <= 0 or undefined)
                               ((course.price ?? 0) > 0 ? (
