@@ -7,6 +7,9 @@ import { Briefcase, Calendar, Clock, DollarSign } from "lucide-react";
 import ApplicationsDialog from "@/components/applications/ApplicationsDialog";
 import ApplyToProjectDialog from "@/components/applications/ApplyToProjectDialog";
 import { useState } from "react";
+import { api } from "@/convex/_generated/api";
+import { useMutation } from "convex/react";
+import { toast } from "sonner";
 
 interface ProjectsListProps {
   projects: Array<Doc<"projects"> & { companyName?: string; companyImage?: string }>;
@@ -16,6 +19,11 @@ interface ProjectsListProps {
 export default function ProjectsList({ projects, isCompanyView }: ProjectsListProps) {
   const [openApplicationsFor, setOpenApplicationsFor] = useState<string | null>(null);
   const [openApplyFor, setOpenApplyFor] = useState<string | null>(null);
+
+  // Add company-side completion actions
+  const approve = useMutation(api.projects.approveCompletion);
+  const reject = useMutation(api.projects.rejectCompletion);
+
   if (projects.length === 0) {
     return (
       <Card className="border-2 border-border">
@@ -65,12 +73,67 @@ export default function ProjectsList({ projects, isCompanyView }: ProjectsListPr
                   <Badge variant="outline">{project.category}</Badge>
                 </div>
               </div>
+
               {isCompanyView ? (
-                <Button variant="outline" className="w-full" onClick={() => setOpenApplicationsFor(project._id as any)}>
-                  View Applications
-                </Button>
+                <>
+                  {/* If completion requested, show approve/rework/reject buttons */}
+                  {project.status === "in_progress" && project.completionRequested ? (
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Badge variant="outline">Completion requested</Badge>
+                      <div className="ml-auto flex gap-2">
+                        <Button
+                          onClick={async () => {
+                            try {
+                              await approve({ projectId: project._id as any });
+                              toast.success("Approved and rewarded intern");
+                            } catch (e) {
+                              toast.error(e instanceof Error ? e.message : "Failed to approve");
+                            }
+                          }}
+                        >
+                          Approve & Reward
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={async () => {
+                            try {
+                              await reject({ projectId: project._id as any, action: "redo" as any });
+                              toast.success("Requested rework");
+                            } catch (e) {
+                              toast.error(e instanceof Error ? e.message : "Failed to request rework");
+                            }
+                          }}
+                        >
+                          Request Rework
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={async () => {
+                            try {
+                              await reject({ projectId: project._id as any, action: "reject" as any });
+                              toast.success("Rejected and unassigned");
+                            } catch (e) {
+                              toast.error(e instanceof Error ? e.message : "Failed to reject");
+                            }
+                          }}
+                        >
+                          Reject & Unassign
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button variant="outline" className="w-full" onClick={() => setOpenApplicationsFor(project._id as any)}>
+                      View Applications
+                    </Button>
+                  )}
+                </>
               ) : (
-                <Button variant="outline" className="w-full" onClick={() => setOpenApplyFor(project._id as any)} disabled={project.status !== "open"}>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setOpenApplyFor(project._id as any)}
+                  disabled={project.status !== "open"}
+                >
                   Apply
                 </Button>
               )}

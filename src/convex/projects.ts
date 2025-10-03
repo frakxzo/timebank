@@ -152,3 +152,116 @@ export const getByCompany = query({
     return projects;
   },
 });
+
+// Intern: request completion on assigned project
+export const requestCompletion = mutation({
+  args: {
+    projectId: v.id("projects"),
+    note: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    if (!user || user.role !== "intern") {
+      throw new Error("Only interns can request completion");
+    }
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new Error("Project not found");
+    if (project.assignedInternId !== user._id) {
+      throw new Error("Not authorized to request completion for this project");
+    }
+    if (project.status !== "in_progress") {
+      throw new Error("Project must be in progress to request completion");
+    }
+    await ctx.db.patch(project._id, {
+      completionRequested: true,
+      completionNote: args.note,
+    });
+  },
+});
+
+// Company: approve completion → reward intern and mark completed
+export const approveCompletion = mutation({
+  args: {
+    projectId: v.id("projects"),
+  },
+  handler: async (ctx, args) => {
+    const actor = await getCurrentUser(ctx);
+    if (!actor || actor.role !== "company") {
+      throw new Error("Only companies can approve completion");
+    }
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new Error("Project not found");
+    if (project.companyId !== actor._id) {
+      throw new Error("Not authorized");
+    }
+    if (project.status !== "in_progress" || !project.assignedInternId || !project.completionRequested) {
+      throw new Error("Project not eligible for approval");
+    }
+
+    // Reward intern
+    const intern = await ctx.db.get(project.assignedInternId);
+    if (!intern) throw new Error("Assigned intern not found");
+    const newBalance = (intern.pointsBalance || 0) + project.pointsReward;
+    await ctx.db.patch(intern._id, {
+      pointsBalance: newBalance,
+      totalPointsEarned: (intern.totalPointsEarned || 0) + project.pointsReward,
+    });
+
+    // Record transaction
+    await ctx.db.insert("transactions", {
+      userId: intern._id,
+      type: "earn",
+      amount: project.pointsReward,
+      description: `Project completed: ${project.title}`,
+      projectId: project._id,
+    });
+
+    // Mark project completed
+    await ctx.db.patch(project._id, {
+      status: "completed",
+      completedAt: Date.now(),
+      completionRequested: false,
+      completionNote: undefined,
+    });
+  },
+});
+
+// Company: reject or request rework
+export const rejectCompletion = mutation({
+  args: {
+    projectId: v.id("projects"),
+    action: v.union(v.literal("redo"), v.literal("reject")), // redo = ask intern to try again; reject = unassign and reopen
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const actor = await getCurrentUser(ctx);
+    if (!actor || actor.role !== "company") {
+      throw new Error("Only companies can manage completion");
+    }
+    const project = await ctx.db.get(args.projectId);
+    if (!project) throw new Error("Project not found");
+    if (project.companyId !== actor._id) {
+      throw new Error("Not authorized");
+    }
+    if (project.status !== "in_progress" || !project.assignedInternId || !project.completionRequested) {
+      throw new Error("Project not eligible to reject/request rework");
+    }
+
+    if (args.action === "redo") {
+      // Keep assigned intern and in_progress; clear the request note
+      await ctx.db.patch(project._id, {
+        completionRequested: false,
+        completionNote: args.reason || project.completionNote,
+      });
+      return;
+    }
+
+    // Full reject: unassign intern and reopen the project
+    await ctx.db.patch(project._id, {
+      status: "open",
+      assignedInternId: undefined,
+      completionRequested: false,
+      completionNote: args.reason || undefined,
+    });
+  },
+});

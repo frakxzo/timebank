@@ -71,6 +71,9 @@ const schema = defineSchema(
       requirements: v.array(v.string()),
       assignedInternId: v.optional(v.id("users")),
       completedAt: v.optional(v.number()),
+      // Add completion request fields
+      completionRequested: v.optional(v.boolean()),
+      completionNote: v.optional(v.string()),
     })
       .index("by_company", ["companyId"])
       .index("by_status", ["status"])
