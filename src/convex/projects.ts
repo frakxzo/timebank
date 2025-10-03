@@ -198,6 +198,27 @@ export const approveCompletion = mutation({
       throw new Error("Project not eligible for approval");
     }
 
+    // Check if company has enough points
+    const companyBalance = actor.pointsBalance || 0;
+    if (companyBalance < project.pointsReward) {
+      throw new Error("Insufficient points to reward intern");
+    }
+
+    // Deduct points from company
+    await ctx.db.patch(actor._id, {
+      pointsBalance: companyBalance - project.pointsReward,
+      totalPointsSpent: (actor.totalPointsSpent || 0) + project.pointsReward,
+    });
+
+    // Record company transaction
+    await ctx.db.insert("transactions", {
+      userId: actor._id,
+      type: "spend",
+      amount: project.pointsReward,
+      description: `Paid for completed project: ${project.title}`,
+      projectId: project._id,
+    });
+
     // Reward intern
     const intern = await ctx.db.get(project.assignedInternId);
     if (!intern) throw new Error("Assigned intern not found");
