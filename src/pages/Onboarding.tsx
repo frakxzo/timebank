@@ -25,12 +25,12 @@ export default function Onboarding() {
       navigate("/dashboard");
     }
 
-    // Auto-assign admin role for the seeded admin account
+    // Force-assign admin role for the seeded admin account even if it was previously set incorrectly
     if (
       !isLoading &&
       isAuthenticated &&
       user?.email === "admin@demo.local" &&
-      !user.role &&
+      user?.role !== "admin" &&
       !adminAutoAssigned.current
     ) {
       adminAutoAssigned.current = true;
