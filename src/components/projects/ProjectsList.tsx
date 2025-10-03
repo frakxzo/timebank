@@ -122,9 +122,12 @@ export default function ProjectsList({ projects, isCompanyView }: ProjectsListPr
                       </div>
                     </div>
                   ) : (
-                    <Button variant="outline" className="w-full" onClick={() => setOpenApplicationsFor(project._id as any)}>
-                      View Applications
-                    </Button>
+                    // Show "View Applications" ONLY when project is open
+                    project.status === "open" ? (
+                      <Button variant="outline" className="w-full" onClick={() => setOpenApplicationsFor(project._id as any)}>
+                        View Applications
+                      </Button>
+                    ) : null
                   )}
                 </>
               ) : (
