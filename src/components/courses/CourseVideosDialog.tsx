@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQuery } from "convex/react";
@@ -22,8 +23,9 @@ type Props = {
 export default function CourseVideosDialog({ open, onOpenChange, courseId, isOwned, isAdmin, courseTitle, uploadedByUserId }: Props) {
   const { user } = useAuth();
   const courseIdConvex = useMemo(() => courseId as any, [courseId]);
-  // Restrict contributions to admins only
-  const canContribute = isAdmin;
+  
+  // Allow course creator or admin to contribute
+  const canContribute = isAdmin || (user?._id === uploadedByUserId);
 
   const videos = useQuery(api.courses.listVideos, open ? { courseId: courseIdConvex } : "skip");
 
@@ -69,7 +71,12 @@ export default function CourseVideosDialog({ open, onOpenChange, courseId, isOwn
         description: description || undefined,
         fileId: storageId as any,
       });
-      toast.success("Video uploaded and added");
+      
+      const successMsg = isAdmin 
+        ? "Video uploaded and added" 
+        : "Video uploaded and submitted for approval";
+      toast.success(successMsg);
+      
       setTitle("");
       setDescription("");
       if (fileRef.current) fileRef.current.value = "";
@@ -90,7 +97,12 @@ export default function CourseVideosDialog({ open, onOpenChange, courseId, isOwn
         description: description || undefined,
         videoUrl,
       });
-      toast.success("Video link added");
+      
+      const successMsg = isAdmin 
+        ? "Video link added" 
+        : "Video link submitted for approval";
+      toast.success(successMsg);
+      
       setTitle("");
       setDescription("");
       setVideoUrl("");
@@ -101,7 +113,7 @@ export default function CourseVideosDialog({ open, onOpenChange, courseId, isOwn
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Course Videos — {courseTitle}</DialogTitle>
         </DialogHeader>
@@ -116,7 +128,12 @@ export default function CourseVideosDialog({ open, onOpenChange, courseId, isOwn
               <ul className="space-y-3">
                 {videos.map((v) => (
                   <li key={v._id} className="rounded border p-3">
-                    <div className="font-medium">{v.title}</div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="font-medium">{v.title}</div>
+                      {isAdmin && v.isApproved === false && (
+                        <Badge variant="secondary">Pending</Badge>
+                      )}
+                    </div>
                     {v.description ? <div className="text-sm text-muted-foreground">{v.description}</div> : null}
                     <div className="mt-2">
                       {v.signedUrl ? (
@@ -171,6 +188,12 @@ export default function CourseVideosDialog({ open, onOpenChange, courseId, isOwn
                   {isUploading ? "Uploading..." : "Upload & Attach"}
                 </Button>
               </div>
+              
+              {!isAdmin && (
+                <p className="text-xs text-muted-foreground">
+                  Note: Your videos will be submitted for admin approval before appearing to students.
+                </p>
+              )}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">You don't have permission to add videos to this course.</p>

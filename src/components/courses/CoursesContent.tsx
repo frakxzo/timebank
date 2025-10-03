@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "convex/react";
 import { motion } from "framer-motion";
-import { BookOpen, LogOut, Plus, Check, X, Coins } from "lucide-react";
+import { BookOpen, LogOut, Plus, Check, X, Coins, Video } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import UploadCourseDialog from "@/components/courses/UploadCourseDialog";
@@ -20,8 +20,11 @@ export default function CoursesContent() {
   const [view, setView] = useState<"explore" | "mine">("explore");
   const courses = useQuery(api.courses.list, { category });
   const pending = useQuery(api.courses.listPending, user?.role === "admin" ? {} : "skip");
+  const pendingVideos = useQuery(api.courses.listPendingVideos, user?.role === "admin" ? {} : "skip");
   const approve = useMutation(api.courses.approve);
   const remove = useMutation(api.courses.remove);
+  const approveVideo = useMutation(api.courses.approveVideo);
+  const removeVideo = useMutation(api.courses.removeVideo);
   const [openUpload, setOpenUpload] = useState(false);
   const purchase = useMutation(api.courses.purchase);
   const adminUpdate = useMutation(api.courses.adminUpdate);
@@ -293,29 +296,77 @@ export default function CoursesContent() {
             />
           )}
 
-         {user?.role === "admin" && pending && pending.length > 0 && (
-           <div className="space-y-4">
-             <h3 className="text-xl font-bold">Pending Submissions</h3>
-             <div className="grid md:grid-cols-2 gap-4">
-               {pending.map((c) => (
-                 <Card key={c._id} className="border-2 border-primary/30">
-                   <CardHeader>
-                     <CardTitle>{c.title}</CardTitle>
-                     <CardDescription>{c.description}</CardDescription>
-                   </CardHeader>
-                   <CardContent className="flex gap-2">
-                     <Button size="sm" onClick={async () => { await approve({ courseId: c._id as any }); toast.success("Approved"); }}>
-                       <Check className="h-4 w-4 mr-1" /> Approve
-                     </Button>
-                     <Button size="sm" variant="outline" onClick={async () => { await remove({ courseId: c._id as any }); toast.success("Removed"); }}>
-                       <X className="h-4 w-4 mr-1" /> Reject
-                     </Button>
-                   </CardContent>
-                 </Card>
-               ))}
-             </div>
-           </div>
-         )}
+          {/* Pending Video Submissions (Admin Only) */}
+          {user?.role === "admin" && pendingVideos && pendingVideos.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-xl font-bold">Pending Video Submissions</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                {pendingVideos.map((v) => (
+                  <Card key={v._id} className="border-2 border-accent/30">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-base">{v.title}</CardTitle>
+                          <CardDescription className="text-xs">
+                            Course: {v.courseName} | By: {v.uploaderName}
+                          </CardDescription>
+                        </div>
+                        <Badge variant="secondary">
+                          <Video className="h-3 w-3 mr-1" />
+                          Video
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        onClick={async () => { 
+                          await approveVideo({ videoId: v._id as any }); 
+                          toast.success("Video approved"); 
+                        }}
+                      >
+                        <Check className="h-4 w-4 mr-1" /> Approve
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={async () => { 
+                          await removeVideo({ videoId: v._id as any }); 
+                          toast.success("Video removed"); 
+                        }}
+                      >
+                        <X className="h-4 w-4 mr-1" /> Reject
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {user?.role === "admin" && pending && pending.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-xl font-bold">Pending Submissions</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                {pending.map((c) => (
+                  <Card key={c._id} className="border-2 border-primary/30">
+                    <CardHeader>
+                      <CardTitle>{c.title}</CardTitle>
+                      <CardDescription>{c.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex gap-2">
+                      <Button size="sm" onClick={async () => { await approve({ courseId: c._id as any }); toast.success("Approved"); }}>
+                        <Check className="h-4 w-4 mr-1" /> Approve
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={async () => { await remove({ courseId: c._id as any }); toast.success("Removed"); }}>
+                        <X className="h-4 w-4 mr-1" /> Reject
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
         </motion.div>
       </div>
      <UploadCourseDialog open={openUpload} onOpenChange={setOpenUpload} role={user?.role || "intern"} />

@@ -310,7 +310,7 @@ export const listVideos = query({
     const course = await ctx.db.get(args.courseId);
     if (!course) throw new Error("Course not found");
 
-    // Admins can always see all videos
+    // Admins can always see all videos (including pending)
     if (user.role !== "admin") {
       // Interns must own the course to view videos
       const owned = await ctx.db
@@ -329,9 +329,14 @@ export const listVideos = query({
       .withIndex("by_course", (q) => q.eq("courseId", args.courseId))
       .collect();
 
+    // Filter out unapproved videos for non-admins
+    const filteredVids = user.role === "admin" 
+      ? vids 
+      : vids.filter((v) => v.isApproved !== false);
+
     // Attach signed URLs for stored files
     const results = await Promise.all(
-      vids.map(async (vdoc) => {
+      filteredVids.map(async (vdoc) => {
         const signedUrl = vdoc.fileId ? await ctx.storage.getUrl(vdoc.fileId) : undefined;
         return {
           ...vdoc,
@@ -343,42 +348,53 @@ export const listVideos = query({
   },
 });
 
-// Generate upload URL for a course video (admins only)
+// Generate upload URL for a course video (admins and course creators)
 export const generateVideoUploadUrl = mutation({
   args: { courseId: v.id("courses") },
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
-    if (!user || user.role !== "admin") throw new Error("Only admins can upload videos");
+    if (!user) throw new Error("Not authenticated");
 
-    // Ensure course exists (guards against invalid course IDs)
     const course = await ctx.db.get(args.courseId);
     if (!course) throw new Error("Course not found");
+
+    // Allow admins or the course creator to upload videos
+    if (user.role !== "admin" && course.uploadedBy !== user._id) {
+      throw new Error("Only admins or course creators can upload videos");
+    }
 
     return await ctx.storage.generateUploadUrl();
   },
 });
 
-// Add a video (URL or uploaded file) to a course (admins only)
+// Add a video (URL or uploaded file) to a course
 export const addVideo = mutation({
   args: {
     courseId: v.id("courses"),
     title: v.string(),
     description: v.optional(v.string()),
-    // Provide either a videoUrl or a fileId (one must be present)
     videoUrl: v.optional(v.string()),
     fileId: v.optional(v.id("_storage")),
     order: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
-    if (!user || user.role !== "admin") throw new Error("Only admins can add videos");
+    if (!user) throw new Error("Not authenticated");
 
     const course = await ctx.db.get(args.courseId);
     if (!course) throw new Error("Course not found");
 
+    // Check permissions: admin or course creator
+    if (user.role !== "admin" && course.uploadedBy !== user._id) {
+      throw new Error("Only admins or course creators can add videos");
+    }
+
     if (!args.videoUrl && !args.fileId) {
       throw new Error("Provide a videoUrl or upload a file");
     }
+
+    // If intern is adding video, mark as pending approval
+    const isApproved = user.role === "admin" ? true : false;
 
     await ctx.db.insert("courseVideos", {
       courseId: args.courseId,
@@ -388,6 +404,60 @@ export const addVideo = mutation({
       videoUrl: args.videoUrl,
       fileId: args.fileId,
       order: args.order,
+      isApproved,
     });
+  },
+});
+
+// Admin: List pending video submissions
+export const listPendingVideos = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUser(ctx);
+    if (!user || user.role !== "admin") {
+      throw new Error("Only admins can view pending videos");
+    }
+    
+    const allVideos = await ctx.db.query("courseVideos").collect();
+    const pending = allVideos.filter((v) => v.isApproved === false);
+    
+    // Attach course info
+    const withCourseInfo = await Promise.all(
+      pending.map(async (video) => {
+        const course = await ctx.db.get(video.courseId);
+        const uploader = await ctx.db.get(video.addedBy);
+        return {
+          ...video,
+          courseName: course?.title || "Unknown",
+          uploaderName: uploader?.name || uploader?.email || "Unknown",
+        };
+      })
+    );
+    
+    return withCourseInfo;
+  },
+});
+
+// Admin: Approve video
+export const approveVideo = mutation({
+  args: { videoId: v.id("courseVideos") },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    if (!user || user.role !== "admin") {
+      throw new Error("Only admins can approve videos");
+    }
+    await ctx.db.patch(args.videoId, { isApproved: true });
+  },
+});
+
+// Admin: Remove video
+export const removeVideo = mutation({
+  args: { videoId: v.id("courseVideos") },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    if (!user || user.role !== "admin") {
+      throw new Error("Only admins can remove videos");
+    }
+    await ctx.db.delete(args.videoId);
   },
 });
