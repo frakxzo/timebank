@@ -213,3 +213,103 @@ export const seed = internalMutation({
     console.log("✅ Database seeded successfully!");
   },
 });
+
+// Add-on: Insert/update specific YouTube courses with low coin prices (20–30 pts)
+export const addCourses = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    // Find an uploader (prefer admin, fallback to any user, otherwise create a seed admin)
+    let uploader = await ctx.db.query("users").collect();
+    let uploaderId =
+      (uploader.find((u) => u.role === "admin")?._id as Id<"users"> | undefined) ||
+      (uploader[0]?._id as Id<"users"> | undefined);
+
+    if (!uploaderId) {
+      uploaderId = await ctx.db.insert("users", {
+        email: "admin_seed@demo.local",
+        name: "seed_admin",
+        role: "admin" as any,
+        pointsBalance: 0,
+        totalPointsEarned: 0,
+        totalPointsSpent: 0,
+      });
+      console.log("✅ Created seed admin user for course uploads");
+    }
+
+    const desiredCourses: Array<{
+      title: string;
+      description: string;
+      category: string;
+      videoUrl: string;
+      duration?: string;
+      price: number;
+    }> = [
+      {
+        title: "SOC Essentials",
+        description: "Security Operations Center fundamentals and workflows.",
+        category: "security",
+        videoUrl: "https://www.youtube.com/watch?v=56NDgBOSpUg",
+        duration: "2h",
+        price: 20,
+      },
+      {
+        title: "Unreal Engine 4 Course",
+        description: "Getting started building with Unreal Engine 4.",
+        category: "development",
+        videoUrl: "https://youtu.be/6UlU_FsicK8",
+        duration: "3h",
+        price: 30,
+      },
+      {
+        title: "101: Security Basics",
+        description: "Security 101 concepts for beginners.",
+        category: "security",
+        videoUrl: "https://youtu.be/56NDgBOSpUg",
+        duration: "1h 30m",
+        price: 20,
+      },
+      {
+        title: "GRC Overview",
+        description: "Governance, Risk, and Compliance explained.",
+        category: "security",
+        videoUrl: "https://www.youtube.com/watch?v=JswwHeEqBIc&t=1457s",
+        duration: "1h 45m",
+        price: 25,
+      },
+      {
+        title: "Stock Market Fundamentals",
+        description: "Understand market basics, instruments, and strategies.",
+        category: "business",
+        videoUrl: "https://youtu.be/3WI9RZODuag?list=PLxNHpNhDaEFJsuzKNrMbr_SESDCCLmSu4",
+        duration: "2h 20m",
+        price: 30,
+      },
+    ];
+
+    // Insert any missing courses (match by title)
+    const existing = await ctx.db.query("courses").collect();
+    const existingTitles = new Set(existing.map((c) => c.title));
+
+    let createdCount = 0;
+    for (const c of desiredCourses) {
+      if (existingTitles.has(c.title)) continue;
+      await ctx.db.insert("courses", {
+        title: c.title,
+        description: c.description,
+        category: c.category,
+        videoUrl: c.videoUrl,
+        duration: c.duration,
+        uploadedBy: uploaderId,
+        isApproved: true,
+        price: c.price,
+      });
+      createdCount++;
+    }
+
+    if (createdCount > 0) {
+      console.log(`✅ Added ${createdCount} course(s) with low coin prices for interns.`);
+    } else {
+      console.log("ℹ️ All target courses already exist. No new courses added.");
+    }
+  },
+});

@@ -70,6 +70,7 @@ export default function CoursesContent() {
                 <SelectItem value="design">Design</SelectItem>
                 <SelectItem value="marketing">Marketing</SelectItem>
                 <SelectItem value="business">Business</SelectItem>
+                <SelectItem value="security">Security</SelectItem>
               </SelectContent>
             </Select>
            <Button onClick={() => setOpenUpload(true)} className="sm:hidden">
