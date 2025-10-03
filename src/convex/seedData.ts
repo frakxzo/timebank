@@ -313,3 +313,33 @@ export const addCourses = internalMutation({
     }
   },
 });
+
+// Grant points to the demo intern for easier testing
+export const grantDemoPoints = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const intern = (await ctx.db.query("users").collect()).find(
+      (u) => u.email === "intern_1@demo.local" || u.name === "intern_1"
+    );
+    if (!intern) {
+      console.log("ℹ️ Demo intern not found; skipping grantDemoPoints");
+      return;
+    }
+    const targetBalance = 500; // enough to purchase any seeded course
+    const current = intern.pointsBalance || 0;
+    if (current >= targetBalance) {
+      console.log("ℹ️ Demo intern already has sufficient points.");
+      return;
+    }
+    await ctx.db.patch(intern._id, {
+      pointsBalance: targetBalance,
+    });
+    await ctx.db.insert("transactions", {
+      userId: intern._id,
+      type: "earn",
+      amount: targetBalance - current,
+      description: "Admin grant for demo testing",
+    });
+    console.log(`✅ Granted demo intern points: ${targetBalance}`);
+  },
+});
