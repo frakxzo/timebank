@@ -1,8 +1,11 @@
-# First, make sure your Convex dev server is running
-npx convex dev
+# Required installations:
+1. Node.js (v18+)
+2. pnpm (npm install -g pnpm)
+3. Git
+4. Code editor (VS Code recommended)
 
-# In another terminal, run the seed command to add the new courses
-npx convex run seedData:addCourses
-
-# Optionally, if you want to grant demo points to the intern for testing
-npx convex run seedData:grantDemoPoints
+# Environment variables needed:
+- VITE_CONVEX_URL (for frontend)
+- SITE_URL (for auth)
+- CONVEX_SITE_URL (for auth)
+- JWT_PRIVATE_KEY (for auth, RS256 PKCS#8 format)
