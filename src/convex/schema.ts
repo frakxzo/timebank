@@ -161,6 +161,8 @@ const schema = defineSchema(
       videoUrl: v.optional(v.string()),
       fileId: v.optional(v.id("_storage")),
       order: v.optional(v.number()),
+      // Add approval workflow for intern-submitted videos
+      isApproved: v.optional(v.boolean()),
     }).index("by_course", ["courseId"]),
   },
   {
