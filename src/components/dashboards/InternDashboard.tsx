@@ -9,10 +9,13 @@ import { useNavigate } from "react-router";
 import ProjectMarketplace from "@/components/projects/ProjectMarketplace";
 import MyApplications from "@/components/applications/MyApplications";
 import TransactionHistory from "@/components/transactions/TransactionHistory";
+import PointsIndicator from "@/components/PointsIndicator";
 
 export default function InternDashboard() {
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
+  // Use reactive current user for live balance
+  const currentUser = useQuery(api.users.current, {});
 
   const handleSignOut = async () => {
     await signOut();
@@ -29,8 +32,8 @@ export default function InternDashboard() {
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-sm text-muted-foreground">Points Earned</p>
-              <p className="text-2xl font-bold text-secondary">{user?.totalPointsEarned || 0}</p>
+              <p className="text-sm text-muted-foreground">Points Balance</p>
+              <p className="text-2xl font-bold text-secondary">{currentUser?.pointsBalance || 0}</p>
             </div>
             <Button variant="outline" onClick={() => navigate("/courses")}>
               <BookOpen className="h-4 w-4 mr-2" />

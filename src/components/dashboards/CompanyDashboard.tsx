@@ -14,11 +14,13 @@ import PurchasePointsDialog from "@/components/points/PurchasePointsDialog";
 import TransactionHistory from "@/components/transactions/TransactionHistory";
 
 export default function CompanyDashboard() {
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
+  // Use reactive current user for live balance
+  const currentUser = useQuery(api.users.current, {});
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
   const [purchasePointsOpen, setPurchasePointsOpen] = useState(false);
-  const myProjects = useQuery(api.projects.getByCompany, user ? { companyId: user._id } : "skip");
+  const myProjects = useQuery(api.projects.getByCompany, currentUser ? { companyId: currentUser._id } : "skip");
 
   const handleSignOut = async () => {
     await signOut();
@@ -36,7 +38,7 @@ export default function CompanyDashboard() {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Points Balance</p>
-              <p className="text-2xl font-bold text-primary">{user?.pointsBalance || 0}</p>
+              <p className="text-2xl font-bold text-primary">{currentUser?.pointsBalance || 0}</p>
             </div>
             <Button variant="outline" onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" />

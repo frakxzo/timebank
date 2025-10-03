@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
 import { ArrowRight, Briefcase, Coins, GraduationCap, Loader2, Zap } from "lucide-react";
 import { useNavigate } from "react-router";
+import PointsIndicator from "@/components/PointsIndicator";
 
 export default function Landing() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -28,6 +29,7 @@ export default function Landing() {
             <span className="text-2xl font-bold neon-text">TimeBank</span>
           </div>
           <div className="flex items-center gap-4">
+            <PointsIndicator />
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
             ) : isAuthenticated ? (

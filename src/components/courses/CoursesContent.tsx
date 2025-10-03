@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "convex/react";
 import { motion } from "framer-motion";
-import { BookOpen, LogOut, Plus, Check, X } from "lucide-react";
+import { BookOpen, LogOut, Plus, Check, X, Coins } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import UploadCourseDialog from "@/components/courses/UploadCourseDialog";
@@ -42,6 +42,13 @@ export default function CoursesContent() {
             <h1 className="text-2xl font-bold neon-text">Courses</h1>
           </div>
           <div className="flex items-center gap-4">
+            {/* Live balance for intern/company */}
+            {(user?.role === "intern" || user?.role === "company") && (
+              <div className="hidden sm:flex items-center gap-2 rounded-md border px-3 py-1 bg-card/60">
+                <Coins className="h-4 w-4 text-accent" />
+                <span className="text-sm font-medium">{(currentUser?.pointsBalance ?? 0)} pts</span>
+              </div>
+            )}
             <Button onClick={() => setOpenUpload(true)} className="hidden sm:inline-flex">
               <Plus className="h-4 w-4 mr-2" />
               {user?.role === "admin" ? "Create Course" : "Submit Course"}
