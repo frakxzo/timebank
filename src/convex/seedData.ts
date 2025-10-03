@@ -1,5 +1,6 @@
 import { internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { v } from "convex/values";
 
 export const seed = internalMutation({
   args: {},
@@ -341,5 +342,29 @@ export const grantDemoPoints = internalMutation({
       description: "Admin grant for demo testing",
     });
     console.log(`✅ Granted demo intern points: ${targetBalance}`);
+  },
+});
+
+// Promote an existing user (by email) to admin
+export const promoteToAdminByEmail = internalMutation({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", args.email))
+      .unique();
+
+    if (!user) {
+      throw new Error(
+        `User with email ${args.email} not found. Have them sign in once to create their account, then try again.`,
+      );
+    }
+
+    await ctx.db.patch(user._id, {
+      role: "admin" as any,
+      isBanned: false,
+    });
+
+    console.log(`✅ Promoted ${args.email} to admin`);
   },
 });
