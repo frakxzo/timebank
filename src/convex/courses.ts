@@ -15,6 +15,11 @@ export const list = query({
 
     let courses = await ctx.db.query("courses").collect();
 
+    // Only show approved courses to interns; admins see all in this list
+    if (user.role !== "admin") {
+      courses = courses.filter((c) => c.isApproved !== false);
+    }
+
     if (args.category && args.category !== "all") {
       courses = courses.filter((c) => c.category === args.category);
     }
@@ -91,9 +96,72 @@ export const create = mutation({
     const courseId = await ctx.db.insert("courses", {
       ...args,
       uploadedBy: user._id,
+      isApproved: true,
     });
 
     return courseId;
+  },
+});
+
+// Submit course (interns) - requires admin approval
+export const submit = mutation({
+  args: {
+    title: v.string(),
+    description: v.string(),
+    category: v.string(),
+    videoUrl: v.optional(v.string()),
+    thumbnailUrl: v.optional(v.string()),
+    duration: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    if (!user || user.role !== "intern") {
+      throw new Error("Only interns can submit courses");
+    }
+    // Create unapproved course entry
+    const courseId = await ctx.db.insert("courses", {
+      ...args,
+      uploadedBy: user._id,
+      isApproved: false,
+    });
+    return courseId;
+  },
+});
+
+// Admin: list pending submissions
+export const listPending = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUser(ctx);
+    if (!user || user.role !== "admin") {
+      throw new Error("Only admins can view pending courses");
+    }
+    const pending = await ctx.db.query("courses").collect();
+    return pending.filter((c) => c.isApproved === false);
+  },
+});
+
+// Admin: approve submission
+export const approve = mutation({
+  args: { courseId: v.id("courses") },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    if (!user || user.role !== "admin") {
+      throw new Error("Only admins can approve courses");
+    }
+    await ctx.db.patch(args.courseId, { isApproved: true });
+  },
+});
+
+// Admin: remove course/submission
+export const remove = mutation({
+  args: { courseId: v.id("courses") },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    if (!user || user.role !== "admin") {
+      throw new Error("Only admins can remove courses");
+    }
+    await ctx.db.delete(args.courseId);
   },
 });
 

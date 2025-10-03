@@ -99,6 +99,8 @@ const schema = defineSchema(
       internId: v.id("users"),
       status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("rejected")),
       message: v.string(),
+      // Optional applicant email provided at apply time
+      applicantEmail: v.optional(v.string()),
     })
       .index("by_project", ["projectId"])
       .index("by_intern", ["internId"]),
@@ -113,6 +115,8 @@ const schema = defineSchema(
       thumbnailUrl: v.optional(v.string()),
       duration: v.optional(v.string()),
       uploadedBy: v.id("users"),
+      // New: approval gate for content submitted by interns
+      isApproved: v.optional(v.boolean()),
     })
       .index("by_category", ["category"])
       .index("by_uploader", ["uploadedBy"]),

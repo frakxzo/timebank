@@ -4,6 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Doc } from "@/convex/_generated/dataModel";
 import { motion } from "framer-motion";
 import { Briefcase, Calendar, Clock, DollarSign } from "lucide-react";
+import ApplicationsDialog from "@/components/applications/ApplicationsDialog";
+import ApplyToProjectDialog from "@/components/applications/ApplyToProjectDialog";
+import { useState } from "react";
 
 interface ProjectsListProps {
   projects: Array<Doc<"projects"> & { companyName?: string; companyImage?: string }>;
@@ -11,6 +14,8 @@ interface ProjectsListProps {
 }
 
 export default function ProjectsList({ projects, isCompanyView }: ProjectsListProps) {
+  const [openApplicationsFor, setOpenApplicationsFor] = useState<string | null>(null);
+  const [openApplyFor, setOpenApplyFor] = useState<string | null>(null);
   if (projects.length === 0) {
     return (
       <Card className="border-2 border-border">
@@ -60,13 +65,28 @@ export default function ProjectsList({ projects, isCompanyView }: ProjectsListPr
                   <Badge variant="outline">{project.category}</Badge>
                 </div>
               </div>
-              {isCompanyView && (
-                <Button variant="outline" className="w-full">
+              {isCompanyView ? (
+                <Button variant="outline" className="w-full" onClick={() => setOpenApplicationsFor(project._id as any)}>
                   View Applications
+                </Button>
+              ) : (
+                <Button variant="outline" className="w-full" onClick={() => setOpenApplyFor(project._id as any)} disabled={project.status !== "open"}>
+                  Apply
                 </Button>
               )}
             </CardContent>
           </Card>
+          <ApplicationsDialog
+            open={openApplicationsFor === (project._id as any)}
+            onOpenChange={(o) => !o && setOpenApplicationsFor(null)}
+            projectId={project._id as any}
+          />
+          <ApplyToProjectDialog
+            open={openApplyFor === (project._id as any)}
+            onOpenChange={(o) => !o && setOpenApplyFor(null)}
+            projectId={project._id as any}
+            projectTitle={project.title}
+          />
         </motion.div>
       ))}
     </div>

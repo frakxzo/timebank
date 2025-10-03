@@ -7,6 +7,7 @@ export const create = mutation({
   args: {
     projectId: v.id("projects"),
     message: v.string(),
+    applicantEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
@@ -30,6 +31,7 @@ export const create = mutation({
       internId: user._id,
       status: "pending",
       message: args.message,
+      applicantEmail: args.applicantEmail,
     });
 
     return applicationId;
