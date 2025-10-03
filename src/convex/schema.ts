@@ -42,6 +42,8 @@ const schema = defineSchema(
       emailVerificationTime: v.optional(v.number()),
       isAnonymous: v.optional(v.boolean()),
       role: v.optional(roleValidator),
+      // Add ban flag for admin moderation
+      isBanned: v.optional(v.boolean()),
       
       // Additional profile fields
       bio: v.optional(v.string()),
