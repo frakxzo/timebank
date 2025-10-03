@@ -16,12 +16,13 @@ type Props = {
   isOwned: boolean;
   isAdmin: boolean;
   courseTitle: string;
+  uploadedByUserId?: string;
 };
 
-export default function CourseVideosDialog({ open, onOpenChange, courseId, isOwned, isAdmin, courseTitle }: Props) {
+export default function CourseVideosDialog({ open, onOpenChange, courseId, isOwned, isAdmin, courseTitle, uploadedByUserId }: Props) {
   const { user } = useAuth();
   const courseIdConvex = useMemo(() => courseId as any, [courseId]);
-  const canContribute = isAdmin || (user?.role === "intern" && isOwned);
+  const canContribute = isAdmin || (user?.role === "intern" && user?._id === (uploadedByUserId as any));
 
   const videos = useQuery(api.courses.listVideos, open ? { courseId: courseIdConvex } : "skip");
 
@@ -171,7 +172,7 @@ export default function CourseVideosDialog({ open, onOpenChange, courseId, isOwn
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Purchase this course to access its videos.</p>
+            <p className="text-sm text-muted-foreground">You don't have permission to add videos to this course.</p>
           )}
         </div>
       </DialogContent>

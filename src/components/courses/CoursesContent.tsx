@@ -106,7 +106,7 @@ export default function CoursesContent() {
                   </CardHeader>
                   <CardContent className="flex flex-col gap-2">
                     {user?.role === "admin" ? (
-                      <div className="flex gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <Button
                           variant="outline"
                           className="w-full"
@@ -145,6 +145,7 @@ export default function CoursesContent() {
                         </Button>
                         <Button
                           variant="destructive"
+                          className="w-full"
                           onClick={async () => {
                             if (!window.confirm("Delete this course?")) return;
                             try {
@@ -205,6 +206,7 @@ export default function CoursesContent() {
               isOwned={!!courses?.find((c) => (c._id as any) === openVideosFor)?.isOwned}
               isAdmin={user?.role === "admin"}
               courseTitle={courses?.find((c) => (c._id as any) === openVideosFor)?.title || "Course"}
+              uploadedByUserId={(courses?.find((c) => (c._id as any) === openVideosFor)?.uploadedBy as any) || undefined}
             />
           )}
 

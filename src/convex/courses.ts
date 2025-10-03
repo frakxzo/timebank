@@ -343,23 +343,20 @@ export const listVideos = query({
   },
 });
 
-// Generate upload URL for a course video (admins or interns who own the course)
+// Generate upload URL for a course video (admins or the intern uploader)
 export const generateVideoUploadUrl = mutation({
   args: { courseId: v.id("courses") },
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
     if (!user) throw new Error("Not authenticated");
 
+    const course = await ctx.db.get(args.courseId);
+    if (!course) throw new Error("Course not found");
+
     if (user.role !== "admin") {
-      // Interns must own the course to upload
-      const owned = await ctx.db
-        .query("coursePurchases")
-        .withIndex("by_user_and_course", (q) =>
-          q.eq("userId", user._id).eq("courseId", args.courseId),
-        )
-        .first();
-      if (!owned) {
-        throw new Error("You must own this course to upload a video");
+      // Only the original uploader (intern) can upload
+      if (user._id !== course.uploadedBy) {
+        throw new Error("Only the course uploader can upload videos");
       }
     }
 
@@ -385,16 +382,10 @@ export const addVideo = mutation({
     const course = await ctx.db.get(args.courseId);
     if (!course) throw new Error("Course not found");
 
-    // Permissions: admin can always add; interns must own
+    // Permissions: admin can always add; interns must be the original uploader
     if (user.role !== "admin") {
-      const owned = await ctx.db
-        .query("coursePurchases")
-        .withIndex("by_user_and_course", (q) =>
-          q.eq("userId", user._id).eq("courseId", args.courseId),
-        )
-        .first();
-      if (!owned) {
-        throw new Error("You must own this course to add videos");
+      if (user._id !== course.uploadedBy) {
+        throw new Error("Only the course uploader can add videos");
       }
     }
 
