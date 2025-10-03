@@ -1,0 +1,10 @@
+   Set-Content -LiteralPath genkey.cjs -Value @'
+   const { generateKeyPairSync } = require("crypto");
+   const { writeFileSync } = require("fs");
+   const key = generateKeyPairSync("rsa", { modulusLength: 2048 })
+     .privateKey.export({ type: "pkcs8", format: "pem" });
+   writeFileSync("jwtRS256_pkcs8.key", key);
+   console.log("Wrote jwtRS256_pkcs8.key");
+   '@
+   node .\genkey.cjs
+   
