@@ -68,6 +68,24 @@ export const getStats = query({
   },
 });
 
+export const promoteUserToAdminByEmail = mutation({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    const actor = await getCurrentUser(ctx);
+    if (!actor || actor.role !== "admin") {
+      throw new Error("Admin access required");
+    }
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", args.email))
+      .unique();
+    if (!user) {
+      throw new Error(`User with email ${args.email} not found. Ask them to sign in once first.`);
+    }
+    await ctx.db.patch(user._id, { role: "admin" as any, isBanned: false });
+  },
+});
+
 export const adjustUserPoints = mutation({
   args: {
     userId: v.id("users"),

@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
@@ -15,6 +16,8 @@ export default function UserManagement() {
   const adjust = useMutation(api.admin.adjustUserPoints);
   const setBan = useMutation(api.admin.setUserBan);
   const del = useMutation(api.admin.deleteUser);
+  const promoteByEmail = useMutation(api.admin.promoteUserToAdminByEmail);
+  const [newAdminEmail, setNewAdminEmail] = useState("");
 
   const handleQuickAdjust = async (userId: string, amount: number) => {
     try {
@@ -63,19 +66,48 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <h2 className="text-2xl font-bold">User Management</h2>
-        <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="company">Companies</SelectItem>
-            <SelectItem value="intern">Interns</SelectItem>
-            <SelectItem value="admin">Admins</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Roles</SelectItem>
+              <SelectItem value="company">Companies</SelectItem>
+              <SelectItem value="intern">Interns</SelectItem>
+              <SelectItem value="admin">Admins</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex gap-2">
+            <Input
+              placeholder="email to promote"
+              className="w-56"
+              value={newAdminEmail}
+              onChange={(e) => setNewAdminEmail(e.target.value)}
+            />
+            <Button
+              variant="outline"
+              onClick={async () => {
+                const email = newAdminEmail.trim().toLowerCase();
+                if (!email || !email.includes("@")) {
+                  toast.error("Enter a valid email");
+                  return;
+                }
+                try {
+                  await promoteByEmail({ email });
+                  toast.success(`Promoted ${email} to admin`);
+                  setNewAdminEmail("");
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Failed to promote");
+                }
+              }}
+            >
+              Make Admin
+            </Button>
+          </div>
+        </div>
       </div>
 
       {!users || users.length === 0 ? (
