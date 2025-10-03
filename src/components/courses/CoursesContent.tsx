@@ -163,12 +163,12 @@ export default function CoursesContent() {
                       <>
                         {course.isOwned ? (
                           <div className="flex gap-2">
-                            <Button variant="outline" className="w-full">
+                            <Button variant="outline" className="flex-1">
                               Start Learning
                             </Button>
                             <Button
                               variant="outline"
-                              className="w-full"
+                              className="flex-1"
                               onClick={() => setOpenVideosFor(course._id as any)}
                             >
                               Videos
