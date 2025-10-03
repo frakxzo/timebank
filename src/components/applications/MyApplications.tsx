@@ -60,6 +60,7 @@ export default function MyApplications() {
                       variant="outline"
                       disabled={!!app.project.completionRequested}
                       onClick={async () => {
+                        if (!app.project) return;
                         try {
                           await requestCompletion({ projectId: app.project._id as any });
                           toast.success("Requested completion");
