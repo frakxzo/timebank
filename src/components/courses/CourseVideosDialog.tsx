@@ -22,7 +22,8 @@ type Props = {
 export default function CourseVideosDialog({ open, onOpenChange, courseId, isOwned, isAdmin, courseTitle, uploadedByUserId }: Props) {
   const { user } = useAuth();
   const courseIdConvex = useMemo(() => courseId as any, [courseId]);
-  const canContribute = isAdmin || (user?.role === "intern" && user?._id === (uploadedByUserId as any));
+  // Restrict contributions to admins only
+  const canContribute = isAdmin;
 
   const videos = useQuery(api.courses.listVideos, open ? { courseId: courseIdConvex } : "skip");
 

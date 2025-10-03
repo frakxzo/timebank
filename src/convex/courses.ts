@@ -343,28 +343,22 @@ export const listVideos = query({
   },
 });
 
-// Generate upload URL for a course video (admins or the intern uploader)
+// Generate upload URL for a course video (admins only)
 export const generateVideoUploadUrl = mutation({
   args: { courseId: v.id("courses") },
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
-    if (!user) throw new Error("Not authenticated");
+    if (!user || user.role !== "admin") throw new Error("Only admins can upload videos");
 
+    // Ensure course exists (guards against invalid course IDs)
     const course = await ctx.db.get(args.courseId);
     if (!course) throw new Error("Course not found");
-
-    if (user.role !== "admin") {
-      // Only the original uploader (intern) can upload
-      if (user._id !== course.uploadedBy) {
-        throw new Error("Only the course uploader can upload videos");
-      }
-    }
 
     return await ctx.storage.generateUploadUrl();
   },
 });
 
-// Add a video (URL or uploaded file) to a course
+// Add a video (URL or uploaded file) to a course (admins only)
 export const addVideo = mutation({
   args: {
     courseId: v.id("courses"),
@@ -377,17 +371,10 @@ export const addVideo = mutation({
   },
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
-    if (!user) throw new Error("Not authenticated");
+    if (!user || user.role !== "admin") throw new Error("Only admins can add videos");
 
     const course = await ctx.db.get(args.courseId);
     if (!course) throw new Error("Course not found");
-
-    // Permissions: admin can always add; interns must be the original uploader
-    if (user.role !== "admin") {
-      if (user._id !== course.uploadedBy) {
-        throw new Error("Only the course uploader can add videos");
-      }
-    }
 
     if (!args.videoUrl && !args.fileId) {
       throw new Error("Provide a videoUrl or upload a file");
