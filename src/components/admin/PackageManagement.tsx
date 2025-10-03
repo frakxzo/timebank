@@ -1,18 +1,70 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { motion } from "framer-motion";
-import { Coins, Package } from "lucide-react";
+import { Coins, Package, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export default function PackageManagement() {
   const packages = useQuery(api.pointPackages.list);
+  const createPackage = useMutation(api.pointPackages.create);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    points: "",
+    price: "",
+    description: "",
+  });
+
+  const handleCreate = async () => {
+    if (!formData.name.trim() || !formData.points || !formData.price || !formData.description.trim()) {
+      toast.error("All fields are required");
+      return;
+    }
+
+    const points = Number(formData.points);
+    const price = Number(formData.price);
+
+    if (!Number.isFinite(points) || points <= 0) {
+      toast.error("Points must be a positive number");
+      return;
+    }
+
+    if (!Number.isFinite(price) || price <= 0) {
+      toast.error("Price must be a positive number");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await createPackage({
+        name: formData.name,
+        points,
+        price,
+        description: formData.description,
+      });
+      toast.success("Package created successfully!");
+      setCreateOpen(false);
+      setFormData({ name: "", points: "", price: "", description: "" });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create package");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Package Management</h2>
-        <Button>
+        <Button onClick={() => setCreateOpen(true)}>
           <Package className="h-4 w-4 mr-2" />
           Create Package
         </Button>
@@ -49,6 +101,60 @@ export default function PackageManagement() {
           ))}
         </div>
       )}
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Point Package</DialogTitle>
+            <DialogDescription>Add a new point package for companies to purchase</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Package Name</Label>
+              <Input
+                id="name"
+                placeholder="e.g., Starter Pack"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="points">Points</Label>
+              <Input
+                id="points"
+                type="number"
+                placeholder="e.g., 100"
+                value={formData.points}
+                onChange={(e) => setFormData({ ...formData, points: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="price">Price (USD)</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                placeholder="e.g., 10.00"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="e.g., Perfect for small projects"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+            </div>
+            <Button onClick={handleCreate} disabled={isSubmitting} className="w-full">
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Create Package
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
