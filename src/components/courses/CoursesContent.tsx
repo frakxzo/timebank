@@ -220,25 +220,39 @@ export default function CoursesContent() {
                               )
                             ) : (
                               // Prevent purchasing courses that are not for sale (price <= 0 or undefined)
-                              ((course.price ?? 0) > 0 ? (
-                                <Button
-                                  className="w-full"
-                                  onClick={async () => {
-                                    try {
-                                      await purchase({ courseId: course._id as any });
-                                      toast.success("Purchased! You now own this course.");
-                                    } catch (e) {
-                                      toast.error(e instanceof Error ? e.message : "Failed to purchase");
-                                    }
-                                  }}
-                                >
-                                  Buy for {course.price ?? 0} pts
-                                </Button>
-                              ) : (
-                                <Button className="w-full" variant="outline" disabled>
-                                  Not for sale
-                                </Button>
-                              ))
+                              (() => {
+                                const price = course.price ?? 0;
+                                const balance = user?.pointsBalance ?? 0;
+                                if (price <= 0) {
+                                  return (
+                                    <Button className="w-full" variant="outline" disabled>
+                                      Not for sale
+                                    </Button>
+                                  );
+                                }
+                                if (balance < price) {
+                                  return (
+                                    <Button className="w-full" variant="outline" disabled>
+                                      Not enough points
+                                    </Button>
+                                  );
+                                }
+                                return (
+                                  <Button
+                                    className="w-full"
+                                    onClick={async () => {
+                                      try {
+                                        await purchase({ courseId: course._id as any });
+                                        toast.success("Purchased! You now own this course.");
+                                      } catch (e) {
+                                        toast.error(e instanceof Error ? e.message : "Failed to purchase");
+                                      }
+                                    }}
+                                  >
+                                    Buy for {price} pts
+                                  </Button>
+                                );
+                              })()
                             )}
                           </>
                         )}
