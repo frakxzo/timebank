@@ -122,9 +122,22 @@ const schema = defineSchema(
       uploadedBy: v.id("users"),
       // New: approval gate for content submitted by interns
       isApproved: v.optional(v.boolean()),
+      // Add: price in points to purchase course
+      price: v.optional(v.number()),
     })
       .index("by_category", ["category"])
       .index("by_uploader", ["uploadedBy"]),
+
+    // Add: Course purchases (ownership) tracking
+    coursePurchases: defineTable({
+      courseId: v.id("courses"),
+      userId: v.id("users"),
+      pricePaid: v.number(),
+      purchasedAt: v.number(),
+    })
+      .index("by_user", ["userId"])
+      .index("by_course", ["courseId"])
+      .index("by_user_and_course", ["userId", "courseId"]),
 
     // Course progress tracking
     courseProgress: defineTable({

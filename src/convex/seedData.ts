@@ -134,6 +134,7 @@ export const seed = internalMutation({
           videoUrl: "https://www.youtube.com/watch?v=Ke90Tje7VS0",
           duration: "1h 30m",
           isApproved: true,
+          price: 150,
         },
         {
           title: "Design Systems 101",
@@ -142,6 +143,7 @@ export const seed = internalMutation({
           videoUrl: "https://www.youtube.com/watch?v=_4J3m5iK8eE",
           duration: "55m",
           isApproved: true,
+          price: 120,
         },
         {
           title: "Marketing Fundamentals",
@@ -150,12 +152,59 @@ export const seed = internalMutation({
           videoUrl: "https://www.youtube.com/watch?v=0yWgAQ2H7Hc",
           duration: "1h 10m",
           isApproved: true,
+          price: 100,
+        },
+        // Added per request
+        {
+          title: "SOC Essentials",
+          description: "Security Operations Center fundamentals and workflows.",
+          category: "security",
+          videoUrl: "https://www.youtube.com/watch?v=56NDgBOSpUg",
+          duration: "2h",
+          isApproved: true,
+          price: 200,
+        },
+        {
+          title: "Unreal Engine 4 Course",
+          description: "Getting started building with Unreal Engine 4.",
+          category: "development",
+          videoUrl: "https://youtu.be/6UlU_FsicK8",
+          duration: "3h",
+          isApproved: true,
+          price: 250,
+        },
+        {
+          title: "101: Security Basics",
+          description: "Security 101 concepts for beginners.",
+          category: "security",
+          videoUrl: "https://youtu.be/56NDgBOSpUg",
+          duration: "1h 30m",
+          isApproved: true,
+          price: 130,
+        },
+        {
+          title: "GRC Overview",
+          description: "Governance, Risk, and Compliance explained.",
+          category: "security",
+          videoUrl: "https://www.youtube.com/watch?v=JswwHeEqBIc&t=1457s",
+          duration: "1h 45m",
+          isApproved: true,
+          price: 180,
+        },
+        {
+          title: "Stock Market Fundamentals",
+          description: "Understand market basics, instruments, and strategies.",
+          category: "business",
+          videoUrl: "https://youtu.be/3WI9RZODuag?list=PLxNHpNhDaEFJsuzKNrMbr_SESDCCLmSu4",
+          duration: "2h 20m",
+          isApproved: true,
+          price: 220,
         },
       ];
       for (const c of courses) {
         await ctx.db.insert("courses", { ...c, uploadedBy: uploader as any });
       }
-      console.log("✅ Seeded sample courses");
+      console.log("✅ Seeded sample courses (with price)");
     }
 
     // Note: Users will be created through authentication

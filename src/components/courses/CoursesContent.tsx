@@ -20,6 +20,8 @@ export default function CoursesContent() {
   const approve = useMutation(api.courses.approve);
   const remove = useMutation(api.courses.remove);
   const [openUpload, setOpenUpload] = useState(false);
+  const purchase = useMutation(api.courses.purchase);
+  const adminUpdate = useMutation(api.courses.adminUpdate);
 
   const handleSignOut = async () => {
     await signOut();
@@ -89,11 +91,86 @@ export default function CoursesContent() {
                     <BookOpen className="h-8 w-8 text-accent mb-2" />
                     <CardTitle>{course.title}</CardTitle>
                     <CardDescription>{course.description}</CardDescription>
+                    <div className="mt-2 text-sm">
+                      {user?.role === "admin" ? (
+                        <span className="text-muted-foreground">Price: {course.price ?? 0} pts</span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {course.isOwned ? "Owned" : `Price: ${course.price ?? 0} pts`}
+                        </span>
+                      )}
+                    </div>
                   </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full">
-                      Start Learning
-                    </Button>
+                  <CardContent className="flex flex-col gap-2">
+                    {user?.role === "admin" ? (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={async () => {
+                            const newTitle = window.prompt("Update title (leave blank to keep current):", course.title) || undefined;
+                            const newDesc = window.prompt("Update description (leave blank to keep current):", course.description) || undefined;
+                            const newPriceStr = window.prompt("Update price (points):", String(course.price ?? 0));
+                            if (newTitle === undefined && newDesc === undefined && newPriceStr === null) return;
+                            const updates: any = {};
+                            if (newTitle !== undefined) updates.title = newTitle;
+                            if (newDesc !== undefined) updates.description = newDesc;
+                            if (newPriceStr !== null) {
+                              const np = Number(newPriceStr);
+                              if (!Number.isFinite(np) || np < 0) {
+                                toast.error("Invalid price");
+                                return;
+                              }
+                              updates.price = np;
+                            }
+                            try {
+                              await adminUpdate({ courseId: course._id as any, ...updates });
+                              toast.success("Course updated");
+                            } catch (e) {
+                              toast.error(e instanceof Error ? e.message : "Failed to update");
+                            }
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={async () => {
+                            if (!window.confirm("Delete this course?")) return;
+                            try {
+                              await remove({ courseId: course._id as any });
+                              toast.success("Course deleted");
+                            } catch (e) {
+                              toast.error(e instanceof Error ? e.message : "Failed to delete");
+                            }
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        {course.isOwned ? (
+                          <Button variant="outline" className="w-full">
+                            Start Learning
+                          </Button>
+                        ) : (
+                          <Button
+                            className="w-full"
+                            onClick={async () => {
+                              try {
+                                await purchase({ courseId: course._id as any });
+                                toast.success("Purchased! You now own this course.");
+                              } catch (e) {
+                                toast.error(e instanceof Error ? e.message : "Failed to purchase");
+                              }
+                            }}
+                          >
+                            Buy for {course.price ?? 0} pts
+                          </Button>
+                        )}
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>

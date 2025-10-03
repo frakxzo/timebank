@@ -24,7 +24,7 @@ export const list = query({
       courses = courses.filter((c) => c.category === args.category);
     }
 
-    // Get uploader info and progress for current user
+    // Get uploader info, progress for current user, and ownership
     const coursesWithDetails = await Promise.all(
       courses.map(async (course) => {
         const uploader = await ctx.db.get(course.uploadedBy);
@@ -35,11 +35,21 @@ export const list = query({
           )
           .first();
 
+        // Check if user owns the course
+        const owned = await ctx.db
+          .query("coursePurchases")
+          .withIndex("by_user_and_course", (q) =>
+            q.eq("userId", user._id).eq("courseId", course._id)
+          )
+          .first();
+
         return {
           ...course,
           uploaderName: uploader?.name || uploader?.email || "Unknown",
           userProgress: progress?.progress || 0,
           userCompleted: progress?.completed || false,
+          isOwned: !!owned,
+          price: course.price ?? 0,
         };
       })
     );
@@ -210,5 +220,82 @@ export const generateUploadUrl = mutation({
       throw new Error("Only admins can upload videos");
     }
     return await ctx.storage.generateUploadUrl();
+  },
+});
+
+// Add: purchase a course (interns spend coins)
+export const purchase = mutation({
+  args: { courseId: v.id("courses") },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    if (!user || user.role !== "intern") {
+      throw new Error("Only interns can purchase courses");
+    }
+    const course = await ctx.db.get(args.courseId);
+    if (!course) throw new Error("Course not found");
+    if (course.isApproved === false) throw new Error("Course is not available");
+    const price = course.price ?? 0;
+    if (price <= 0) throw new Error("Course is not for sale");
+
+    // Check already owned
+    const existing = await ctx.db
+      .query("coursePurchases")
+      .withIndex("by_user_and_course", (q) =>
+        q.eq("userId", user._id).eq("courseId", course._id)
+      )
+      .first();
+    if (existing) {
+      throw new Error("You already own this course");
+    }
+
+    const balance = user.pointsBalance || 0;
+    if (balance < price) {
+      throw new Error("Insufficient points");
+    }
+
+    // Deduct points
+    await ctx.db.patch(user._id, {
+      pointsBalance: balance - price,
+      totalPointsSpent: (user.totalPointsSpent || 0) + price,
+    });
+
+    // Record transaction
+    await ctx.db.insert("transactions", {
+      userId: user._id,
+      type: "spend",
+      amount: price,
+      description: `Purchased course: ${course.title}`,
+    });
+
+    // Record ownership
+    await ctx.db.insert("coursePurchases", {
+      courseId: course._id,
+      userId: user._id,
+      pricePaid: price,
+      purchasedAt: Date.now(),
+    });
+  },
+});
+
+// Add: admin update course (content/price/approval)
+export const adminUpdate = mutation({
+  args: {
+    courseId: v.id("courses"),
+    title: v.optional(v.string()),
+    description: v.optional(v.string()),
+    category: v.optional(v.string()),
+    videoUrl: v.optional(v.string()),
+    thumbnailUrl: v.optional(v.string()),
+    duration: v.optional(v.string()),
+    price: v.optional(v.number()),
+    isApproved: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+    if (!user || user.role !== "admin") {
+      throw new Error("Only admins can update courses");
+    }
+    const { courseId, ...updates } = args;
+    await ctx.db.patch(courseId, updates);
   },
 });
