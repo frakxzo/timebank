@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useMutation } from "convex/react";
 import { motion } from "framer-motion";
 import { Building2, Loader2, UserCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ export default function Onboarding() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const setRole = useMutation(api.profile.setRole);
+  const adminAutoAssigned = useRef(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -23,7 +24,27 @@ export default function Onboarding() {
     if (user?.role) {
       navigate("/dashboard");
     }
-  }, [isLoading, isAuthenticated, user, navigate]);
+
+    // Auto-assign admin role for the seeded admin account
+    if (
+      !isLoading &&
+      isAuthenticated &&
+      user?.email === "admin@demo.local" &&
+      !user.role &&
+      !adminAutoAssigned.current
+    ) {
+      adminAutoAssigned.current = true;
+      (async () => {
+        try {
+          await setRole({ role: "admin" });
+          toast.success("Admin role assigned. Redirecting...");
+          navigate("/dashboard");
+        } catch {
+          // If this fails, user can still select a role manually
+        }
+      })();
+    }
+  }, [isLoading, isAuthenticated, user, navigate, setRole]);
 
   const handleRoleSelection = async (role: string) => {
     setIsSubmitting(true);
